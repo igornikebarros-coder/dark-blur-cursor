@@ -166,31 +166,32 @@ def _noise(M, u):
     return _NOISE_CACHE[key]
 
 
+# ------------------------------------------------------- monochrome whitish frosted style
 THEMES = {
-    "dark": dict(
-        fill_top=(52, 58, 76), fill_bot=(10, 12, 19), fa0=0.76, fa1=0.14, noise=4.0,
-        glyph=(240, 246, 255), glyph_shadow=(0, 0, 0), inner=(150, 185, 255), inner_gain=0.34,
-        sheen=(255, 255, 255), sheen_a=0.15, rim=(232, 240, 255), rim_lo=0.50, rim_hi=0.45,
-        rim2=None, outer=(6, 8, 14), outer_a=0.55, shadow=(0, 0, 0), shadow_a=1.0,
-        halo_a=(80, 135, 255), halo_b=(155, 105, 255), halo_gain=0.62, tint=(150, 195, 255)),
-    "light": dict(
-        fill_top=(250, 252, 255), fill_bot=(188, 200, 226), fa0=0.80, fa1=-0.06, noise=-3.0,
-        glyph=(30, 38, 62), glyph_shadow=(255, 255, 255), inner=(255, 255, 255), inner_gain=0.55,
-        sheen=(255, 255, 255), sheen_a=0.40, rim=(44, 58, 98), rim_lo=0.88, rim_hi=0.12,
-        rim2=(255, 255, 255), outer=(255, 255, 255), outer_a=0.65, shadow=(24, 32, 70), shadow_a=0.85,
-        halo_a=(90, 135, 255), halo_b=(165, 115, 255), halo_gain=0.38, tint=(70, 120, 245)),
+    # dark theme: whitish frosted body, soft white glow, thin darker edge
+    "dark": dict(body_top=(238, 241, 249), body_bot=(168, 176, 196), body_dim=(98, 104, 122), body_a=0.92,
+                 edge=(54, 59, 76), edge_hw=0.62, glow=(255, 255, 255), glow_a=0.60, tint_a=0.0,
+                 shimmer=(255, 255, 255), glyph=(30, 34, 50), glyph_shadow=(255, 255, 255),
+                 shadow=(0, 0, 0), shadow_a=0.38),
+    # light theme: whitish body too, slightly stronger gray edge + soft gray shadow so it reads on light backgrounds
+    "light": dict(body_top=(252, 253, 255), body_bot=(196, 203, 220), body_dim=(130, 137, 156), body_a=0.96,
+                  edge=(78, 85, 106), edge_hw=0.85, glow=(44, 50, 70), glow_a=0.42, tint_a=0.0,
+                  shimmer=(255, 255, 255), glyph=(30, 34, 50), glyph_shadow=(255, 255, 255),
+                  shadow=(28, 34, 60), shadow_a=0.50),
 }
 
 
-def render_layers(cv, theme="dark", halo=True):
-    """Render Canvas layers to an NxN straight-alpha uint8 RGBA array."""
+def render_layers(cv, theme="dark", phase=None, pulse=1.0):
+    """Monochrome whitish-frosted render of Canvas layers -> NxN straight-alpha uint8 RGBA.
+
+    phase: None = static; 0..1 = position of the white shimmer sweeping across the shape.
+    pulse: brightness of the outer glow (~1)."""
     T = THEMES[theme]
     M, u, N, ss = cv.M, cv.u, cv.N, cv.ss
+    HW = T["edge_hw"]
     yy, xx = np.mgrid[0:M, 0:M].astype(np.float32)
-    X, Y = (xx + 0.5) / u, (yy + 0.5) / u               # design units
-    diag = np.clip((X + Y) / 64.0, 0, 1)                # 0 top-left .. 1 bottom-right
+    X, Y = (xx + 0.5) / u, (yy + 0.5) / u
     out = np.zeros((M, M, 4), np.float32)
-    noise = _noise(M, u)
     f3 = lambda k: np.array(T[k], np.float32)
 
     for L in cv.layers:
@@ -203,71 +204,52 @@ def render_layers(cv, theme="dark", halo=True):
             _over(out, T["glyph_shadow"], sh * (1 - m))
             _over(out, T["glyph"], m * 0.96)
             continue
-        light = None
-        if L.light is not None:
-            light = np.clip(L.light(X, Y), 0, 1).astype(np.float32)
+        ys, xs = np.nonzero(inside)
+        x0, x1, y0, y1 = xs.min() / u, xs.max() / u, ys.min() / u, ys.max() / u
+        spat = np.clip(((X - x0) + (Y - y0)) / max((x1 - x0) + (y1 - y0), 1e-3), 0, 1)
 
         din = cv2.distanceTransform(inside, cv2.DIST_L2, 5).astype(np.float32) / u
         dout = cv2.distanceTransform(1 - inside, cv2.DIST_L2, 5).astype(np.float32) / u
+        sd = np.where(inside > 0, -din, dout)                              # signed distance (+ outside)
 
-        # soft shadow (knocked out under the translucent glass)
+        # emphasis map e: white shimmer band sweeping across, or the spinner's bright head
+        e = np.zeros((M, M), np.float32)
+        spinner = L.light is not None
+        if spinner:
+            e = np.clip(L.light(X, Y), 0, 1).astype(np.float32)
+        elif phase is not None:
+            c = -0.30 + 1.60 * phase
+            e = np.exp(-((spat - c) / 0.17) ** 2).astype(np.float32)
+
+        # soft shadow (gray, stronger in the light theme)
         if L.shadow:
-            s1 = _blur(np.roll(m, (int(1.1 * u), int(0.5 * u)), (0, 1)), 1.15 * u) * 0.42
-            s2 = _blur(np.roll(m, (int(0.35 * u), int(0.15 * u)), (0, 1)), 0.4 * u) * 0.30
-            sh = np.clip(s1 + s2, 0, 0.6) * T["shadow_a"]
-            _over(out, T["shadow"], np.clip(sh, 0, 1) * (1 - m))
+            s1 = _blur(np.roll(m, (int(0.9 * u), int(0.6 * u)), (0, 1)), 1.1 * u) * T["shadow_a"]
+            _over(out, T["shadow"], np.clip(s1, 0, 1) * (1 - m))
 
-        # cool blue -> violet edge light just outside the shape (kept tight so it stays crisp at 32 px)
-        if halo and L.shadow:
-            hw = 0.95
-            h = np.exp(-np.maximum(dout - 0.35, 0) / hw) * np.clip(1.2 - dout / 3.4, 0, 1) * (1 - m)
-            g = np.clip(diag * 1.6, 0, 1)[..., None]
-            hc = f3("halo_a") * (1 - g) + f3("halo_b") * g
-            ha = np.clip(h * T["halo_gain"], 0, 1)
-            if light is not None:
-                ha = np.clip(ha + h * light * 0.25, 0, 1)
-            _over(out, hc, ha)
+        # soft neutral outer glow, pulsing; brighter where the shimmer passes
+        if L.shadow:
+            o = np.maximum(sd - HW, 0)
+            g1 = np.exp(-o / 0.9) * np.clip(1.0 - o / 3.5, 0, 1)
+            g2 = np.exp(-o / 2.2) * np.clip(1.0 - o / 6.0, 0, 1)
+            gk = pulse * (0.55 + 0.6 * e) if not spinner else pulse * (0.20 + 0.80 * e)
+            _over(out, T["glow"], np.clip((g1 * 0.8 + g2 * 0.4) * T["glow_a"] * gk, 0, 1) * (1 - m))
 
-        # smoky / frosted fill gradient
-        col = np.empty((M, M, 3), np.float32)
-        top, bot = f3("fill_top"), f3("fill_bot")
-        t = np.clip(diag * 1.3, 0, 1)[..., None]
-        col[:] = top * (1 - t) + bot * t
-        col += (noise[..., None] * T["noise"])
-        fa = (T["fa0"] + T["fa1"] * diag + noise * 0.03) * L.alpha
-        if light is not None:
-            tint = f3("tint")
-            col = col * (1 - light[..., None] * 0.9) + tint * (light[..., None] * 0.9)
-            fa = fa * (1 - light * 0.5) + 0.44 * light
-        fa = np.clip(fa, 0, 1) * m
-        _over(out, np.clip(col, 0, 255), fa)
+        # whitish frosted body: vertical gradient, soft top-left sheen
+        g = np.clip((Y - y0) / max(y1 - y0, 1e-3), 0, 1)[..., None]
+        body = f3("body_top") * (1 - g) + f3("body_bot") * g
+        if spinner:                                                        # tail is gray, head is white
+            body = f3("body_dim") * (1 - e[..., None]) + f3("body_top") * e[..., None]
+        _over(out, body, m * T["body_a"] * L.alpha)
+        _over(out, (255, 255, 255), m * np.clip(1 - spat * 1.6, 0, 1) ** 1.5 * 0.30)
+        if not spinner:                                                    # the white shimmer
+            _over(out, T["shimmer"], m * e * 0.95)
 
-        # inner glow
-        g = np.exp(-din / 1.5) * m
-        dirw = 0.75 + 0.5 * (1 - diag)
-        _over(out, T["inner"], np.clip(g * T["inner_gain"] * dirw, 0, 1))
+        # thin darker edge for definition, plus a bright inner rim (frost)
+        band = np.clip((HW - np.abs(sd)) * u + 0.5, 0, 1)
+        _over(out, T["edge"], band * 0.96)
+        rim = np.clip((0.28 - np.abs(sd + HW + 0.30)) * u + 0.5, 0, 1) * (sd < 0)
+        _over(out, (255, 255, 255), rim * 0.70)
 
-        # sheen (top-left specular)
-        sheen = np.clip(1 - diag * 1.9, 0, 1) ** 1.5 * T["sheen_a"] * m
-        _over(out, T["sheen"], sheen)
-
-        # outer hairline
-        ow = 0.65
-        oa = np.clip((ow * u - dout * u) / 1.0 + 0.5, 0, 1) * (1 - m) * T["outer_a"]
-        _over(out, T["outer"], oa)
-
-        # rim (+ optional bright inner line for the light theme)
-        rw = 0.95
-        ra = np.clip((rw - din) * u + 0.5, 0, 1) * m
-        rim_a = T["rim_lo"] + T["rim_hi"] * (1 - np.clip(diag * 1.4, 0, 1))
-        if light is not None:
-            rim_a = np.clip(rim_a + light * 0.5, 0, 1)
-        _over(out, T["rim"], ra * rim_a)
-        if T["rim2"] is not None:
-            r2 = np.clip((rw + 0.75 - din) * u + 0.5, 0, 1) * np.clip((din - rw) * u + 0.5, 0, 1) * m
-            _over(out, T["rim2"], r2 * 0.55)
-
-    # box downsample in premultiplied space
     out = out.reshape(N, ss, N, ss, 4).mean(axis=(1, 3))
     a = out[..., 3:4]
     rgb = np.where(a > 1e-4, out[..., :3] / np.maximum(a, 1e-4), 0)
@@ -319,7 +301,7 @@ def build_ani(frames, rates, title="Dark Blur", author="Dark Blur Cursor", seq=N
     steps = len(seq) if seq else len(frames)
     flags = 1 | (2 if seq else 0)
     anih = struct.pack("<9I", 36, len(frames), steps, 0, 0, 32, 1, rates[0], flags)
-    info = b"INFO" + _chunk(b"INAM", title.encode("latin1") + b"\0") + _chunk(b"IART", author.encode("latin1") + b"\0")
+    info = b"INFO" + _chunk(b"INAM", title.encode("latin1", "replace") + b"\0") + _chunk(b"IART", author.encode("latin1") + b"\0")
     body = b"ACON" + _chunk(b"LIST", info) + _chunk(b"anih", anih)
     body += _chunk(b"rate", struct.pack("<%dI" % len(rates), *rates))
     if seq:

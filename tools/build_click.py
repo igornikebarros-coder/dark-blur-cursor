@@ -1,21 +1,25 @@
 #!/usr/bin/env python3
-"""Pre-renders the click effects to click-animations/<effect>-<dark|light>.bgra.
+"""Pre-renders the monochrome whitish frosted click effects to click-animations/<effect>-<dark|light>.bgra.
 
-Format: 48 frames of 128x128 pixels, 32bpp, top-down,
-byte order B,G,R,A with PREMULTIPLIED alpha, ready for UpdateLayeredWindow (AC_SRC_ALPHA).
+Format: 40 frames of 160x160 pixels, 32bpp, top-down, byte order B,G,R,A with PREMULTIPLIED alpha,
+ready for UpdateLayeredWindow (AC_SRC_ALPHA). Frame step in the AHK script is 16 ms.
 """
 import os, math, sys
 import numpy as np
 import cv2
+sys.path.insert(0, os.path.dirname(__file__))
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 OUT = os.path.join(ROOT, "click-animations")
-FRAMES, SIZE, SS = 48, 128, 3
+FRAMES, SIZE, SS = 40, 160, 3
 M = SIZE * SS
 yy, xx = np.mgrid[0:M, 0:M].astype(np.float32)
 CX = CY = (M - 1) / 2.0
-R_ = np.sqrt((xx - CX) ** 2 + (yy - CY) ** 2)
-AA = 0.9 * SS          # edge softness in hi-res px
+R_ = np.sqrt((xx - CX) ** 2 + (yy - CY) ** 2) / SS          # radius in output px
+ANG = (np.arctan2(yy - CY, xx - CX) / (2 * np.pi)).astype(np.float32)   # -0.5..0.5
+AA = 0.9 * SS
+THEME = "dark"
+BODY = {"dark": ((240, 243, 250), (176, 184, 204), 0.86), "light": ((252, 253, 255), (200, 207, 224), 0.90)}
 
 
 def ease_out(t):  return 1 - (1 - t) ** 3
@@ -30,62 +34,39 @@ def over(dst, rgb, a):
 
 
 PAL = {
-    "dark": dict(top=(46, 52, 70), bot=(12, 14, 22), fillk=1.0, inner=None, shadow=(0, 0, 0), shadow_k=0.32,
-                 outer=(6, 8, 14), outer_a=0.5, rim=(232, 240, 255), rim_lo=0.55, rim_hi=0.40, rim2=None,
-                 halo_a=(80, 135, 255), halo_b=(155, 105, 255), halo_k=0.55, spec=(255, 255, 255)),
-    "light": dict(top=(250, 252, 255), bot=(186, 198, 226), fillk=0.95, inner=(255, 255, 255), shadow=(24, 32, 70), shadow_k=0.26,
-                  outer=(255, 255, 255), outer_a=0.6, rim=(44, 58, 98), rim_lo=0.85, rim_hi=0.15, rim2=(255, 255, 255),
-                  halo_a=(90, 135, 255), halo_b=(165, 115, 255), halo_k=0.40, spec=(255, 255, 255)),
+    "dark": dict(edge=(58, 64, 82), glow=(255, 255, 255), glow_k=1.0, hw=0.8),
+    "light": dict(edge=(82, 90, 112), glow=(36, 42, 64), glow_k=0.65, hw=1.0),
 }
-THEME = "dark"
 
 
-def glass(dst, sdf, k=1.0, fill=0.58, glow=0.30, glow_w=7.0, rim_w=1.3, tint=(150, 190, 255), light=None):
-    """Frosted-glass shape from a signed distance field (negative = inside, in output px)."""
+def neon(dst, sdf, col=None, k=1.0, body=1.0, hw=1.25, glow=1.0, glow_w=1.0, tint=0.35):
+    """Whitish frosted shape with a thin darker edge and soft glow, from a signed distance field
+    (output px, + = outside). `col` is ignored (kept for call compatibility): everything is monochrome."""
     P = PAL[THEME]
+    ehw = hw * 0.7 * P["hw"] / 0.8                    # edge half width (px)
     s = sdf * SS
-    body = np.clip(0.5 - s / AA, 0, 1)
-    # soft shadow, knocked out under the glass
-    sh = cv2.GaussianBlur(np.roll(body, (2 * SS, SS), (0, 1)), (0, 0), 2.2 * SS) * P["shadow_k"] * k
-    over(dst, P["shadow"], sh * (1 - body))
-    # cool blue -> violet edge light just outside the shape
-    outd = np.maximum(sdf, 0)
-    g = np.clip((xx + yy) / (1.2 * M), 0, 1)[..., None]
-    hc = np.array(P["halo_a"], np.float32) * (1 - g) + np.array(P["halo_b"], np.float32) * g
-    h = np.exp(-np.maximum(outd - 0.3, 0) / 1.1) * np.clip(1.2 - outd / 4.0, 0, 1) * (1 - body)
-    over(dst, hc, np.clip(h * P["halo_k"] * k, 0, 1))
-    # smoky / frosted fill: lighter towards the top-left
-    g1 = np.clip((xx + yy) / (2.0 * M), 0, 1)[..., None]
-    col = np.array(P["top"], np.float32) * (1 - g1) + np.array(P["bot"], np.float32) * g1
-    over(dst, col, body * fill * P["fillk"] * k)
-    # inner glow
-    ig = np.exp(s / (glow_w * SS)) * body
-    over(dst, P["inner"] or tint, np.clip(ig * glow * k, 0, 1))
-    # outer hairline, then rim
-    ow = 0.7 * SS
-    over(dst, P["outer"], np.clip(0.5 + (ow - s) / AA, 0, 1) * np.clip(0.5 + s / AA, 0, 1) * P["outer_a"] * k)
-    rim = body * np.clip(0.5 + (rim_w * SS + s) / AA, 0, 1)
-    ra = P["rim_lo"] + P["rim_hi"] * (1 - g1[..., 0])
-    over(dst, P["rim"], rim * ra * k)
-    if P["rim2"] is not None:
-        r2 = body * np.clip(0.5 + ((rim_w + 0.9) * SS + s) / AA, 0, 1) * np.clip(0.5 - (rim_w * SS + s) / AA, 0, 1)
-        over(dst, P["rim2"], r2 * 0.5 * k)
-    if light is not None:
-        over(dst, P["spec"], body * light)
+    b_in = np.clip(0.5 - s / AA, 0, 1)
+    o = np.maximum(sdf - ehw, 0)
+    g = (np.exp(-o / (1.3 * glow_w)) * 0.75 + np.exp(-o / (4.5 * glow_w)) * 0.38) * np.clip(1 - o / (14 * glow_w), 0, 1)
+    over(dst, P["glow"], np.clip(g * glow * P["glow_k"] * k, 0, 1) * (1 - b_in))
+    top, bot, ba = BODY[THEME]
+    gy = np.clip(yy / M, 0, 1)[..., None]
+    over(dst, np.array(top, np.float32) * (1 - gy) + np.array(bot, np.float32) * gy, b_in * ba * body * k)
+    band = np.clip((ehw * SS - np.abs(s)) / AA + 0.5, 0, 1)
+    over(dst, P["edge"], band * np.clip(0.96 * k, 0, 1))
+    rim = np.clip((0.35 * SS - np.abs(s + (ehw + 0.45) * SS)) / AA + 0.5, 0, 1) * (sdf < 0)
+    over(dst, (255, 255, 255), rim * np.clip(0.7 * k, 0, 1))
 
 
 def finish(dst):
     d = dst.reshape(SIZE, SS, SIZE, SS, 4).mean(axis=(1, 3))
-    # premultiplied colour = straight colour * alpha ; dst colours are already premultiplied
     a = np.clip(d[..., 3], 0, 1)
     bgra = np.empty((SIZE, SIZE, 4), np.uint8)
-    bgra[..., 0] = np.clip(d[..., 2] + 0.5, 0, 255).astype(np.uint8)
-    bgra[..., 1] = np.clip(d[..., 1] + 0.5, 0, 255).astype(np.uint8)
-    bgra[..., 2] = np.clip(d[..., 0] + 0.5, 0, 255).astype(np.uint8)
+    for i, c in enumerate((2, 1, 0)):
+        bgra[..., i] = np.clip(d[..., c] + 0.5, 0, 255).astype(np.uint8)
     bgra[..., 3] = np.clip(a * 255 + 0.5, 0, 255).astype(np.uint8)
-    # guarantee premultiplied invariant (colour <= alpha)
     for c in range(3):
-        bgra[..., c] = np.minimum(bgra[..., c], bgra[..., 3])
+        bgra[..., c] = np.minimum(bgra[..., c], bgra[..., 3])      # premultiplied invariant
     return bgra
 
 
@@ -93,36 +74,48 @@ def new():
     return np.zeros((M, M, 4), np.float32)
 
 
+MONO = {"dark": np.array((236, 240, 248), np.float32), "light": np.array((60, 66, 90), np.float32)}
+
+
+def ring_col(hue=0.0):
+    return MONO[THEME]
+
+
+def mono_const(hue=0.0):
+    return MONO[THEME]
+
+
 # ------------------------------------------------------------------ effects
 def fx_ripple(f):
     t = f / (FRAMES - 1)
     d = new()
-    for delay, k in ((0.0, 1.0), (0.22, 0.75)):
+    for i, delay in enumerate((0.0, 0.16, 0.32)):
         tt = clamp01((t - delay) / (1 - delay))
         if tt <= 0:
             continue
-        r = 5 + 54 * ease_out(tt)
-        w = 2.2 + 6.5 * (1 - tt)
-        fade = (1 - tt) ** 1.3 * min(1, tt * 14)
-        glass(d, np.abs(R_ / SS - r) - w / 2, k=k * fade, fill=0.62, glow=0.45, glow_w=2.2)
-    # tiny press flash
-    if t < 0.25:
-        a = 1 - t / 0.25
-        glass(d, R_ / SS - 4.5 * (1 + t * 2), k=a, fill=0.5, glow=0.6, glow_w=3.0)
+        r = 8 + 68 * ease_out(tt)
+        w = 3.0 + 7.0 * (1 - tt)
+        fade = (1 - tt) ** 1.0 * min(1, tt * 10)
+        neon(d, np.abs(R_ - r) - w / 2, ring_col(), k=fade, hw=1.5, glow=1.1)
+    if t < 0.3:                                      # press flash
+        a = 1 - t / 0.3
+        neon(d, R_ - 6 * (1 + t * 2.5), ring_col(t), k=a, hw=1.4)
     return d
 
 
 def fx_glow(f):
     t = f / (FRAMES - 1)
     d = new()
-    r = 8 + 40 * ease_out(t)
-    fade = (1 - t) ** 1.1 * min(1, t * 12)
-    glass(d, R_ / SS - r, k=fade, fill=0.42, glow=0.9, glow_w=9.0 + 8 * t, rim_w=1.2)
-    # bright, quickly fading core
-    c = clamp01(1 - t * 3.2)
+    r = 12 + 64 * ease_out(t)
+    fade = (1 - t) ** 0.9 * min(1, t * 10)
+    col = ring_col(t * 0.8)
+    neon(d, R_ - r, col, k=fade, body=0.35, hw=1.9, glow=1.3, glow_w=1.6, tint=0.7)
+    # saturated radial colour bloom inside
+    bloom = (1 - np.clip(R_ / max(r, 1), 0, 1)) ** 1.4
+    over(d, MONO[THEME], np.clip(bloom * 0.35 * fade, 0, 1) * np.clip(0.5 - (R_ - r) * SS / AA, 0, 1))
+    c = clamp01(1 - t * 3.0)
     if c > 0:
-        core = np.exp(-(R_ / SS) ** 2 / (2 * (7 + 6 * (1 - c)) ** 2))
-        over(d, (200, 225, 255), core * 0.55 * c)
+        over(d, (255, 255, 255), np.exp(-R_ ** 2 / (2 * (6 + 6 * (1 - c)) ** 2)) * 0.80 * c)
     return d
 
 
@@ -130,40 +123,46 @@ def fx_particles(f):
     t = f / (FRAMES - 1)
     d = new()
     rng = np.random.RandomState(11)
-    n = 16
-    sdf = np.full((M, M), 1e3, np.float32)
+    n = 24
+    fade = (1 - t) ** 0.75 * min(1, t * 14)
     for i in range(n):
-        ang = (i / n) * 2 * math.pi + rng.uniform(-0.18, 0.18)
-        dist = rng.uniform(32, 58)
-        r0 = rng.uniform(2.6, 5.2)
-        delay = rng.uniform(0, 0.12)
+        ang = (i / n) * 2 * math.pi + rng.uniform(-0.12, 0.12)
+        dist = rng.uniform(40, 74)
+        r0 = rng.uniform(3.2, 6.4)
+        delay = rng.uniform(0, 0.1)
         tt = clamp01((t - delay) / (1 - delay))
         p = ease_out(tt)
-        r = r0 * (1 - 0.55 * tt) + 0.6
-        x, y = dist * p * math.cos(ang), dist * p * math.sin(ang) + 6 * tt * tt  # slight gravity
-        s = np.sqrt((xx - CX - x * SS) ** 2 + (yy - CY - y * SS) ** 2) / SS - r
-        sdf = np.minimum(sdf, s)
-    fade = (1 - t) ** 0.8 * min(1, t * 16)
-    glass(d, sdf, k=fade, fill=0.7, glow=0.55, glow_w=1.8, rim_w=1.0)
-    # soft central bloom
-    over(d, (170, 205, 255), np.exp(-(R_ / SS) ** 2 / (2 * 9 ** 2)) * 0.25 * clamp01(1 - t * 4))
+        r = r0 * (1 - 0.5 * tt) + 0.8
+        x, y = dist * p * math.cos(ang), dist * p * math.sin(ang) + 6 * tt * tt
+        sdf = np.sqrt((xx - CX - x * SS) ** 2 + (yy - CY - y * SS) ** 2) / SS - r
+        hue = (i / n) * 0.8 + t * 0.5
+        neon(d, sdf, MONO[THEME],
+             k=fade, hw=1.2, glow=0.95, glow_w=0.9)
+    over(d, (255, 255, 255), np.exp(-R_ ** 2 / (2 * 10 ** 2)) * 0.55 * clamp01(1 - t * 4))
     return d
 
 
 def fx_orbit(f):
     t = f / (FRAMES - 1)
     d = new()
-    fade = min(1, t * 12) * (1 - t) ** 0.9
-    r = 46 * (1 - ease_in_out(t) * 0.78) + 4
-    sdf = np.full((M, M), 1e3, np.float32)
+    env = min(1, t * 10) * (1 - t) ** 0.8
+    turns = 1.35
+
+    def pos(tt, i):
+        r = 70 * (1 - ease_in_out(tt) * 0.8) + 6
+        a = i * 2 * math.pi / 3 + tt * 2 * math.pi * turns
+        return r * math.cos(a), r * math.sin(a)
+
     for i in range(3):
-        ang = i * 2 * math.pi / 3 + t * 2 * math.pi * 1.25
-        x, y = r * math.cos(ang), r * math.sin(ang)
-        rad = 5.2 - 2.4 * t
-        sdf = np.minimum(sdf, np.sqrt((xx - CX - x * SS) ** 2 + (yy - CY - y * SS) ** 2) / SS - rad)
-    glass(d, sdf, k=fade, fill=0.72, glow=0.6, glow_w=2.0, rim_w=1.1)
-    # faint guide ring
-    glass(d, np.abs(R_ / SS - r) - 0.8, k=fade * 0.45, fill=0.4, glow=0.2, glow_w=1.5, rim_w=0.7)
+        for g in range(9, -1, -1):                       # comet trail: older ghosts are smaller and dimmer
+            tt = max(0.0, t - g * 0.018)
+            x, y = pos(tt, i)
+            rad = (6.2 - 2.4 * tt) * (1 - 0.07 * g)
+            sdf = np.sqrt((xx - CX - x * SS) ** 2 + (yy - CY - y * SS) ** 2) / SS - rad
+            hue = i * 0.27 + t * 0.9 + g * 0.015
+            col = MONO[THEME]
+            kk = env * (1 - g / 11.0) ** 1.4
+            neon(d, sdf, col, k=kk, hw=1.2 if g == 0 else 0.9, glow=1.0 if g == 0 else 0.35, glow_w=0.9)
     return d
 
 
@@ -176,14 +175,19 @@ def render(name, theme="dark"):
     return np.stack([finish(EFFECTS[name](f)) for f in range(FRAMES)])
 
 
+def _job(a):
+    return a, render(*a)
+
+
 def main():
+    from multiprocessing import Pool
     os.makedirs(OUT, exist_ok=True)
     for old in os.listdir(OUT):
         if old.endswith(".bgra"):
             os.remove(os.path.join(OUT, old))
-    for theme in ("dark", "light"):
-        for name in EFFECTS:
-            fr = render(name, theme)
+    jobs = [(n, th) for th in ("dark", "light") for n in EFFECTS]
+    with Pool() as pool:
+        for (name, theme), fr in pool.imap_unordered(_job, jobs):
             assert fr.shape == (FRAMES, SIZE, SIZE, 4)
             with open(os.path.join(OUT, "%s-%s.bgra" % (name, theme)), "wb") as f:
                 f.write(fr.tobytes())

@@ -5,9 +5,9 @@ Persistent()
 ; ============================================================================
 ;  Dark Blur Cursor - Click Animations (AutoHotkey v2)
 ;
-;  Plays a dark frosted-glass effect at the mouse pointer on every left click.
+;  Plays a monochrome glass effect at the mouse pointer on every left click.
 ;  The effects are pre-rendered frames (<effect>-<dark|light>.bgra, effects: ripple,
-;  glow, particle, orbit): 48 frames of 128x128 px, 32bpp, top-down, B,G,R,A bytes
+;  glow, particle, orbit): 40 frames of 160x160 px, 32bpp, top-down, B,G,R,A bytes
 ;  with PREMULTIPLIED alpha. Frames are blitted to a click-through layered window with
 ;  UpdateLayeredWindow. Keep this script and the .bgra files in the same folder.
 ;
@@ -19,8 +19,8 @@ Persistent()
 ; ============================================================================
 
 AppName    := "Dark Blur Cursor"
-FrameCount := 48
-FrameSize  := 128
+FrameCount := 40
+FrameSize  := 160
 FrameBytes := FrameSize * FrameSize * 4
 FrameMs    := 16
 EffectFiles  := ["ripple", "glow", "particle", "orbit"]
@@ -172,14 +172,14 @@ OnExit(Cleanup)
 
 ; --------------------------------------------------------------- functions
 StartEffect(*) {
-    global Enabled, Started, Position, Overlay, FrameMs, ActiveFrames, Frames, SelectedStyle
+    global Enabled, Started, Position, Overlay, FrameMs, FrameSize, ActiveFrames, Frames, SelectedStyle
     if !Enabled
         return
     ActiveFrames := Frames[CurrentTheme()][SelectedStyle]
     point := Buffer(8, 0)
     if !DllCall("GetCursorPos", "Ptr", point)
         return
-    half := 64
+    half := FrameSize // 2
     NumPut("Int", NumGet(point, 0, "Int") - half, "Int", NumGet(point, 4, "Int") - half, Position)
     Started := A_TickCount
     PaintFrame()

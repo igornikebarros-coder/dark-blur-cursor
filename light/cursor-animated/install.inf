@@ -11,68 +11,68 @@ AddReg    = Scheme.Reg
 Scheme.Cur = 10,"%CUR_DIR%"
 
 [Scheme.Reg]
-HKCU,"Control Panel\Cursors\Schemes","%SCHEME_NAME%",,"%10%\%CUR_DIR%\normal.ani,%10%\%CUR_DIR%\help.cur,%10%\%CUR_DIR%\working.ani,%10%\%CUR_DIR%\busy.ani,%10%\%CUR_DIR%\precision.cur,%10%\%CUR_DIR%\text.cur,%10%\%CUR_DIR%\handwriting.cur,%10%\%CUR_DIR%\unavailable.cur,%10%\%CUR_DIR%\vertical.cur,%10%\%CUR_DIR%\horizontal.cur,%10%\%CUR_DIR%\diagonal1.cur,%10%\%CUR_DIR%\diagonal2.cur,%10%\%CUR_DIR%\move.cur,%10%\%CUR_DIR%\alternate.cur,%10%\%CUR_DIR%\link.ani,%10%\%CUR_DIR%\location.cur,%10%\%CUR_DIR%\person.cur"
+HKCU,"Control Panel\Cursors\Schemes","%SCHEME_NAME%",,"%10%\%CUR_DIR%\normal.ani,%10%\%CUR_DIR%\help.ani,%10%\%CUR_DIR%\working.ani,%10%\%CUR_DIR%\busy.ani,%10%\%CUR_DIR%\precision.ani,%10%\%CUR_DIR%\text.ani,%10%\%CUR_DIR%\handwriting.ani,%10%\%CUR_DIR%\unavailable.ani,%10%\%CUR_DIR%\vertical.ani,%10%\%CUR_DIR%\horizontal.ani,%10%\%CUR_DIR%\diagonal1.ani,%10%\%CUR_DIR%\diagonal2.ani,%10%\%CUR_DIR%\move.ani,%10%\%CUR_DIR%\alternate.ani,%10%\%CUR_DIR%\link.ani,%10%\%CUR_DIR%\location.ani,%10%\%CUR_DIR%\person.ani"
 
 [Scheme.Cur]
 normal.ani
-help.cur
+help.ani
 working.ani
 busy.ani
-precision.cur
-text.cur
-handwriting.cur
-unavailable.cur
-vertical.cur
-horizontal.cur
-diagonal1.cur
-diagonal2.cur
-move.cur
-alternate.cur
+precision.ani
+text.ani
+handwriting.ani
+unavailable.ani
+vertical.ani
+horizontal.ani
+diagonal1.ani
+diagonal2.ani
+move.ani
+alternate.ani
 link.ani
-location.cur
-person.cur
-alias.cur
-copy.cur
-cell.cur
-col-resize.cur
-row-resize.cur
-zoom-in.cur
-zoom-out.cur
-grab.cur
-grabbing.cur
-vertical-text.cur
+location.ani
+person.ani
+alias.ani
+copy.ani
+cell.ani
+col-resize.ani
+row-resize.ani
+zoom-in.ani
+zoom-out.ani
+grab.ani
+grabbing.ani
+vertical-text.ani
 
 [SourceDisksNames]
 1 = %DISK_NAME%,,,
 
 [SourceDisksFiles]
 normal.ani = 1
-help.cur = 1
+help.ani = 1
 working.ani = 1
 busy.ani = 1
-precision.cur = 1
-text.cur = 1
-handwriting.cur = 1
-unavailable.cur = 1
-vertical.cur = 1
-horizontal.cur = 1
-diagonal1.cur = 1
-diagonal2.cur = 1
-move.cur = 1
-alternate.cur = 1
+precision.ani = 1
+text.ani = 1
+handwriting.ani = 1
+unavailable.ani = 1
+vertical.ani = 1
+horizontal.ani = 1
+diagonal1.ani = 1
+diagonal2.ani = 1
+move.ani = 1
+alternate.ani = 1
 link.ani = 1
-location.cur = 1
-person.cur = 1
-alias.cur = 1
-copy.cur = 1
-cell.cur = 1
-col-resize.cur = 1
-row-resize.cur = 1
-zoom-in.cur = 1
-zoom-out.cur = 1
-grab.cur = 1
-grabbing.cur = 1
-vertical-text.cur = 1
+location.ani = 1
+person.ani = 1
+alias.ani = 1
+copy.ani = 1
+cell.ani = 1
+col-resize.ani = 1
+row-resize.ani = 1
+zoom-in.ani = 1
+zoom-out.ani = 1
+grab.ani = 1
+grabbing.ani = 1
+vertical-text.ani = 1
 
 [Strings]
 CUR_DIR     = "Cursors\Light Blur Animated"

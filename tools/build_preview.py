@@ -126,7 +126,7 @@ def make_static_sheets():
     head = background(p[0].width, 70, True)
     d = ImageDraw.Draw(head)
     d.text((24, 12), "Dark Blur Cursor", font=font(28, True), fill=(240, 244, 255))
-    d.text((24, 46), "Vidro fosco escuro e claro  \u2022  cursores clássicos + animados  \u2022  animações de clique", font=font(13), fill=(160, 172, 200))
+    d.text((24, 46), "Vidro fosco esbranquiçado  \u2022  cursores clássicos + animados  \u2022  animações de clique", font=font(13), fill=(160, 172, 200))
     stack([head] + p, os.path.join(PREV, "showcase.png"))
     # every cursor of each theme on both backgrounds
     for th in ("dark", "light"):
@@ -143,20 +143,20 @@ COMBOS = [("dark", False), ("dark", True), ("light", False), ("light", True)]
 
 
 def make_animated_gif():
-    cells = [("busy", "Ocupado"), ("working", "Segundo plano"), ("normal", "Normal (brilho)"), ("link", "Link (brilho)")]
+    cells = [("busy", "Ocupado"), ("working", "Segundo plano"), ("normal", "Normal"), ("link", "Link"), ("move", "Mover"), ("text", "Texto")]
     data = {}
     for th in ("dark", "light"):
         for stem, label in cells:
-            fr, rate = ani_frames(cur_path(th, stem, "cursor-animated", ".ani"), 128)
+            fr, rate = ani_frames(cur_path(th, stem, "cursor-animated", ".ani"), 64)
             data[(th, stem)] = (fr, np.cumsum(rate) * (1000 / 60.0))
-    cw, ch = 150, 150
+    cw, ch = 130, 150
     W, H = cw * len(cells), ch * 4 + 34
     base = Image.new("RGB", (W, H), (18, 20, 28))
     for r, (th, dk) in enumerate(COMBOS):
         base.paste(background(W, ch, dk), (0, r * ch))
         ImageDraw.Draw(base).text((10, r * ch + 8), THEME_TITLE[th] + " Animated", font=font(12, True), fill=(236, 240, 250) if dk else (40, 44, 58))
     ImageDraw.Draw(base).text((W // 2, 4 * ch + 17), "Dark Blur Cursor - cursores animados", font=font(14, True), fill=(220, 228, 245), anchor="mm")
-    step, period = 60, 2400
+    step, period = 50, 1600
     frames, durs = [], []
     for k in range(period // step):
         t = k * step
@@ -165,7 +165,7 @@ def make_animated_gif():
             for ci, (stem, label) in enumerate(cells):
                 fr, cum = data[(th, stem)]
                 idx = int(np.searchsorted(cum, t % cum[-1], side="right")) % len(fr)
-                im = fr[idx].resize((96, 96), Image.LANCZOS)
+                im = fr[idx].resize((96, 96), Image.BICUBIC)
                 paste_cursor(img, im, ci * cw + cw / 2, r * ch + 66)
                 dr.text((ci * cw + cw / 2, r * ch + 134), label, font=font(11), fill=(236, 240, 250) if dk else (40, 44, 58), anchor="mm")
         frames.append(img); durs.append(step)
@@ -174,10 +174,10 @@ def make_animated_gif():
 
 def make_click_gif():
     names = [("ripple", "Ondulação"), ("glow", "Brilho"), ("particle", "Partículas"), ("orbit", "Órbita")]
-    fx = {(n, th): np.fromfile(os.path.join(ROOT, "click-animations", "%s-%s.bgra" % (n, th)), np.uint8).reshape(48, 128, 128, 4)
+    fx = {(n, th): np.fromfile(os.path.join(ROOT, "click-animations", "%s-%s.bgra" % (n, th)), np.uint8).reshape(40, 160, 160, 4)
           for n, _ in names for th in ("dark", "light")}
     arrows = {th: cur_image(open(cur_path(th, "normal"), "rb").read(), 32) for th in ("dark", "light")}
-    cw, ch = 150, 150
+    cw, ch = 176, 176
     W, H = cw * 4, ch * 4 + 34
     base = Image.new("RGB", (W, H), (18, 20, 28))
     for r, (th, dk) in enumerate(COMBOS):
@@ -185,22 +185,22 @@ def make_click_gif():
         ImageDraw.Draw(base).text((10, r * ch + 8), "Efeito " + ("escuro" if th == "dark" else "claro"), font=font(12, True), fill=(236, 240, 250) if dk else (40, 44, 58))
     ImageDraw.Draw(base).text((W // 2, 4 * ch + 17), "Dark Blur Cursor - animações de clique", font=font(14, True), fill=(220, 228, 245), anchor="mm")
     frames, durs = [], []
-    seq = list(range(0, 48, 2)) + [None] * 8
+    seq = list(range(0, 40, 2)) + [None] * 8
     for k in seq:
         img = base.copy(); dr = ImageDraw.Draw(img)
         for r, (th, dk) in enumerate(COMBOS):
             arrow, hot = arrows[th]
             for ci, (n, label) in enumerate(names):
-                cx, cy = ci * cw + cw // 2, r * ch + 70
+                cx, cy = ci * cw + cw // 2, r * ch + 84
                 if k is not None:
                     f = fx[(n, th)][k].astype(np.float32)
                     a = f[..., 3:4] / 255.0
-                    box = (cx - 64, cy - 64, cx + 64, cy + 64)
+                    box = (cx - 80, cy - 80, cx + 80, cy + 80)
                     reg = np.array(img.crop(box), np.float32)
                     comp = f[..., [2, 1, 0]] + reg * (1 - a)       # premultiplied "over"
                     img.paste(Image.fromarray(np.clip(comp, 0, 255).astype(np.uint8)), box[:2])
                 img.paste(arrow, (cx - hot[0], cy - hot[1]), arrow)
-                dr.text((cx, r * ch + 138), label, font=font(11), fill=(236, 240, 250) if dk else (40, 44, 58), anchor="mm")
+                dr.text((cx, r * ch + 164), label, font=font(11), fill=(236, 240, 250) if dk else (40, 44, 58), anchor="mm")
         frames.append(img); durs.append(30 if k is not None else 60)
     to_gif(frames, durs, os.path.join(PREV, "dark-blur-cursor-click-animations.gif"))
 

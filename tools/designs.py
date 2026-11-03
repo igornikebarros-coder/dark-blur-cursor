@@ -8,11 +8,8 @@ TIP = (3.3, 2.3)
 
 
 def band_light(t):
-    """Diagonal shimmer sweep; t in [0,1] sweeps, None = rest."""
-    if t is None:
-        return None
-    c = -8.0 + t * 46.0
-    return lambda X, Y: 0.55 * np.exp(-(((X + Y) * 0.5 - c) / 2.6) ** 2)
+    """(unused: the animated scheme cycles the neon colour instead of a shimmer sweep)"""
+    return None
 
 
 def comet_light(cx, cy, head):
@@ -20,7 +17,7 @@ def comet_light(cx, cy, head):
     def f(X, Y):
         phi = np.arctan2(Y - cy, X - cx)
         d = np.mod(head - phi, 2 * np.pi)
-        return np.clip(1 - d / (1.3 * np.pi), 0, 1) ** 1.8
+        return np.clip(1 - d / (1.15 * np.pi), 0, 1) ** 1.6
     return f
 
 
@@ -73,7 +70,7 @@ def g_person(c, cx, cy):
     c.poly(pts)
 
 
-def dbl_arrow(c, ang, R=13.8, hl=7.0, hw=5.6, sw=3.0, cx=16, cy=16, both=True):
+def dbl_arrow(c, ang, R=13.8, hl=7.0, hw=5.6, sw=3.8, cx=16, cy=16, both=True):
     """Double-headed arrow through (cx,cy) rotated by ang (0 = vertical)."""
     c.push(cx, cy, 1.0, ang)
     heads = [-1, 1] if both else [-1]
@@ -115,10 +112,10 @@ def busy(c, t=0.62):
 def precision(c, t=None):
     c.base = (16,16,.85)
     c.begin()
-    c.ring(16, 16, 3.9, 2.0)
+    c.ring(16, 16, 4.4, 2.8)
     for a in (0, 90, 180, 270):
         c.push(16, 16, 1.0, a)
-        c.rrect(14.8, 2.4, 17.2, 11.0, 1.0)
+        c.rrect(14.3, 2.4, 17.7, 10.6, 1.2)
         c.reset()
     c.hotspot = (16, 16)
 
@@ -188,8 +185,8 @@ def diagonal2(c, t=None):   # NE-SW
 def move(c, t=None):
     c.base = (16,16,.84)
     c.begin()
-    dbl_arrow(c, 0, R=14.0, hl=6.6, hw=5.2, sw=2.8)
-    dbl_arrow(c, 90, R=14.0, hl=6.6, hw=5.2, sw=2.8)
+    dbl_arrow(c, 0, R=14.0, hl=6.6, hw=5.2, sw=3.6)
+    dbl_arrow(c, 90, R=14.0, hl=6.6, hw=5.2, sw=3.6)
     c.hotspot = (16, 16)
 
 
@@ -263,8 +260,8 @@ def cell(c, t=None):
 def col_resize(c, t=None):
     c.base = (16,16,.85)
     c.begin()
-    c.rrect(12.6, 5.0, 15.0, 27.0, 1.2)
-    c.rrect(17.0, 5.0, 19.4, 27.0, 1.2)
+    c.rrect(12.2, 5.0, 15.0, 27.0, 1.2)
+    c.rrect(17.0, 5.0, 19.8, 27.0, 1.2)
     for s in (-1, 1):
         x = 16 + s * 1.0
         c.rect(min(x, 16 + s * 8.4), 14.6, max(x, 16 + s * 8.4), 17.4)
@@ -276,8 +273,8 @@ def row_resize(c, t=None):
     c.base = (16,16,.85)
     c.begin()
     c.push(16, 16, 1.0, 90)
-    c.rrect(12.6, 5.0, 15.0, 27.0, 1.2)
-    c.rrect(17.0, 5.0, 19.4, 27.0, 1.2)
+    c.rrect(12.2, 5.0, 15.0, 27.0, 1.2)
+    c.rrect(17.0, 5.0, 19.8, 27.0, 1.2)
     for s in (-1, 1):
         x = 16 + s * 1.0
         c.rect(min(x, 16 + s * 8.4), 14.6, max(x, 16 + s * 8.4), 17.4)

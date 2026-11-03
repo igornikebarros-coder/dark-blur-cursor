@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Builds cursor-classic/ and cursor-animated/ (.cur, .ani, install.inf)."""
-import os, sys
+import os, sys, math
 from multiprocessing import Pool
 sys.path.insert(0, os.path.dirname(__file__))
 from cursorlib import *
@@ -8,19 +8,20 @@ import designs as D
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 STATIC_SIZES = (32, 48, 64, 96, 128)
-ANI_SIZES = (32, 48, 64, 128)
+ANI_SIZES = (32, 48, 64)
 FUNCS = {s: f for s, _, f, _ in D.ALL}
 
 
 def render_one(args):
-    stem, N, kw, theme = args
+    stem, N, kw, theme = args[:4]
+    phase, pulse = (args[4], args[5]) if len(args) > 4 else (None, 1.0)
     c = Canvas(N)
     FUNCS[stem](c, **kw)
-    return render_layers(c, theme), hot_px(c.hotspot, N)
+    return render_layers(c, theme, phase, pulse), hot_px(c.hotspot, N)
 
 
-def frame_cur(stem, kw, theme):
-    return build_cur([render_one((stem, N, kw, theme)) for N in ANI_SIZES])
+def frame_cur(stem, kw, theme, phase, pulse):
+    return build_cur([render_one((stem, N, kw, theme, phase, pulse)) for N in ANI_SIZES])
 
 
 def ani_job(a):
@@ -28,8 +29,10 @@ def ani_job(a):
 
 
 def make_ani(pool, stem, kws, rates, title, theme):
-    frames = pool.map(ani_job, [(stem, kw, theme) for kw in kws])
-    return build_ani(frames, rates, title=title)
+    """kws: per-frame design kwargs; a white shimmer sweeps across once per loop and the outline glow pulses once."""
+    n = len(kws)
+    jobs = [(stem, kw, theme, i / n, 1.0 + 0.55 * math.sin(2 * math.pi * i / n)) for i, kw in enumerate(kws)]
+    return build_ani(pool.map(ani_job, jobs), rates, title=title)
 
 
 def write(path, data, mode="wb"):
@@ -95,25 +98,18 @@ def build_theme(pool, theme):
     allf = [s + ".cur" for s, *_ in D.ROLES] + [s + ".cur" for s, *_ in D.EXTRAS]
     with open(os.path.join(d, "install.inf"), "w", newline="", encoding="ascii") as f:
         f.write(make_inf(name, d, files, allf, False))
-    # ---------- animated
+    # ---------- animated: EVERY cursor is an .ani with a visible neon colour cycle + brightness pulse
     d = os.path.join(base, "cursor-animated")
-    for stem, data in statics.items():
-        write(os.path.join(d, stem + ".cur"), data)
     nb = 24
-    anis = {
-        "busy": make_ani(pool, "busy", [dict(t=i / nb) for i in range(nb)], [2] * nb, name + " - Busy", theme),
-        "working": make_ani(pool, "working", [dict(t=i / nb) for i in range(nb)], [2] * nb, name + " - Working", theme),
-    }
-    ns = 16  # 1 rest frame (held) + 15 sweep frames
-    for stem, title in (("normal", "Normal"), ("link", "Link")):
-        kws = [dict(t=None)] + [dict(t=(i + 0.5) / (ns - 1)) for i in range(ns - 1)]
-        anis[stem] = make_ani(pool, stem, kws, [100] + [3] * (ns - 1), "%s - %s" % (name, title), theme)
-    for stem, data in anis.items():
-        write(os.path.join(d, stem + ".ani"), data)
-        os.remove(os.path.join(d, stem + ".cur"))
-    files = {k: s + (".ani" if s in anis else ".cur") for s, _, _, k in D.ROLES}
-    order = [x[0] for x in D.ROLES]
-    allf = sorted(files.values(), key=lambda f: order.index(f.rsplit(".", 1)[0])) + [s + ".cur" for s, *_ in D.EXTRAS]
+    for stem, label, fn, key in D.ALL:
+        if stem in ("busy", "working"):
+            kws, rates = [dict(t=i / nb) for i in range(nb)], [2] * nb          # spinner: 0.8 s per turn
+        else:
+            kws, rates = [{} for _ in range(nb)], [4] * nb                      # 24 x 4/60 s = 1.6 s loop
+        title = "%s - %s" % (name, label)
+        write(os.path.join(d, stem + ".ani"), make_ani(pool, stem, kws, rates, title, theme))
+    files = {k: s + ".ani" for s, _, _, k in D.ROLES}
+    allf = [s + ".ani" for s, *_ in D.ROLES] + [s + ".ani" for s, *_ in D.EXTRAS]
     with open(os.path.join(d, "install.inf"), "w", newline="", encoding="ascii") as f:
         f.write(make_inf(name + " Animated", d, files, allf, True))
     print("built", theme)

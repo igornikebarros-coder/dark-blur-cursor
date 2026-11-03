@@ -89,9 +89,9 @@ for theme, name in (("dark", "Dark Blur"), ("light", "Light Blur")):
         print("%s %-24s scheme=%r files=%d missing=%s" % ("OK " if ok and not missing else "!! ", theme + "/" + sub, sch, len(listed), missing))
         bad += (not ok) + len(missing)
 for p in sorted(glob.glob(os.path.join(ROOT, "click-animations", "*.bgra"))):
-    d = np.fromfile(p, np.uint8).reshape(48, 128, 128, 4)
+    d = np.fromfile(p, np.uint8).reshape(40, 160, 160, 4)
     prem = bool((d[..., :3] <= d[..., 3:4]).all())
-    ok = d.size == 48 * 128 * 128 * 4 and prem and d[..., 3].max() > 150 and d[:, 0, 0, 3].max() == 0
+    ok = d.size == 40 * 160 * 160 * 4 and prem and d[..., 3].max() > 150 and d[:, 0, 0, 3].max() == 0
     print("%s %-30s premultiplied=%s corners_clear=%s" % ("OK " if ok else "!! ", os.path.relpath(p, ROOT), prem, d[:, 0, 0, 3].max() == 0))
     bad += (not ok)
 print("PROBLEMS:", bad)

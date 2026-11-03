@@ -10,20 +10,21 @@
 
 # Dark Blur Cursor
 
-Pacote de cursores para Windows em estilo **vidro fosco** (*frosted glass*), em dois temas:
+Pacote de cursores para Windows em estilo **vidro fosco esbranquiçado**, 100 % monocromático (sem cores), em dois temas:
 
-- **Dark Blur** — vidro escuro esfumaçado, borda clara suave.
-- **Light Blur** — vidro claro leitoso, borda azul-ardósia bem legível.
+- **Dark Blur** — corpo branco-fosco, brilho branco suave ao redor e contorno fino mais escuro para dar definição (ideal para fundos escuros).
+- **Light Blur** — também branco-fosco, mas com contorno cinza mais forte e sombra cinza suave para ler bem em fundos claros.
 
-Os dois têm brilho interno sutil, sombra leve e uma **luz azul/violeta ao redor** do desenho (nítida em 32 px),
-no esquema clássico (estático) e no animado, mais **animações de clique** em AutoHotkey v2 com tema claro/escuro.
+Esquema clássico (estático) e **esquema animado em que todos os cursores são `.ani`**: um brilho branco varre cada cursor e o brilho ao redor
+pulsa (loop de 1,6 s, 24 quadros); Ocupado/Segundo plano têm um anel girando de alto contraste.
+Também há **animações de clique** em AutoHotkey v2 (brancas/cinza, grandes), com tema claro/escuro.
 
 ## Conteúdo
 
 | Pasta | O que tem |
 | --- | --- |
 | `dark/cursor-classic/` | esquema **Dark Blur**: 17 cursores `.cur` + 10 extras (Windhawk) + `install.inf` |
-| `dark/cursor-animated/` | esquema **Dark Blur Animated**: `busy.ani`, `working.ani`, `normal.ani`, `link.ani` + demais `.cur` + `install.inf` |
+| `dark/cursor-animated/` | esquema **Dark Blur Animated**: todos os cursores em `.ani` (brilho branco varrendo + pulso do brilho; anel girando em Ocupado/Segundo plano) + `install.inf` |
 | `light/cursor-classic/` | esquema **Light Blur** |
 | `light/cursor-animated/` | esquema **Light Blur Animated** |
 | `click-animations/` | `click-animations.ahk` + efeitos pré-renderizados `ripple`, `glow`, `particle`, `orbit` em `-dark.bgra` e `-light.bgra` |
@@ -36,7 +37,7 @@ Extras: `alias`, `copy`, `cell`, `col-resize`, `row-resize`, `zoom-in`, `zoom-ou
 
 **Tamanhos:** base de 32×32 px (100 % de escala) com as proporções dos cursores padrão do Windows
 (a seta mede ~13×19 px e a mão ~21×25 px, já com o contorno). 48 e 64 px são as variantes padrão para
-125–200 % de DPI; 96 e 128 px são o mesmo desenho ampliado (cursor grande). As animações têm 32, 48, 64 e 128 px.
+125–200 % de DPI; 96 e 128 px são o mesmo desenho ampliado (cursor grande). Os `.ani` têm 32, 48 e 64 px.
 Os pontos ativos (*hotspots*) são os mesmos nos dois temas.
 
 ## Como instalar o esquema de cursores
@@ -69,7 +70,7 @@ O esquema do Windows não tem espaço para copiar, atalho, zoom, mão aberta/fec
 
 ## Animações de clique (AutoHotkey v2)
 
-Cada clique esquerdo toca um efeito de vidro na posição do ponteiro, independente do esquema de cursores e do Windhawk.
+Cada clique esquerdo toca um efeito monocromático (branco/cinza) na posição do ponteiro, independente do esquema de cursores e do Windhawk.
 
 1. Instale o [AutoHotkey v2](https://www.autohotkey.com/).
 2. Mantenha na mesma pasta: `click-animations.ahk`, os oito arquivos `*.bgra` e `dark-blur.ico`.
@@ -87,8 +88,8 @@ As escolhas ficam em `settings.ini`, na mesma pasta do script.
 **Iniciar automaticamente:** use **Iniciar com o Windows** no menu da bandeja, ou `Win + R` > `shell:startup`
 e coloque ali um atalho para `click-animations.ahk`. Se mover a pasta depois, desmarque e marque a opção de novo.
 
-**Formato dos efeitos (`.bgra`):** 48 frames de 128×128 px, 32 bits, de cima para baixo, bytes B, G, R, A com alfa
-**pré-multiplicado** (3.145.728 bytes por arquivo), desenhados via `UpdateLayeredWindow` em uma janela que ignora cliques.
+**Formato dos efeitos (`.bgra`):** 40 frames de 160×160 px, 32 bits, de cima para baixo, bytes B, G, R, A com alfa
+**pré-multiplicado** (4.096.000 bytes por arquivo), desenhados via `UpdateLayeredWindow` em uma janela que ignora cliques.
 Teste de carregamento sem abrir a sobreposição: `AutoHotkey64.exe click-animations.ahk --check`.
 
 ## Recriar / personalizar
@@ -102,18 +103,19 @@ python tools/verify.py          # confere .cur/.ani, hotspots, .inf e .bgra
 python tools/make_release.py    # zips por tema + zip completo em dist/
 ```
 
-Desenhos em `tools/designs.py` (grade 32×32); visual de vidro e temas em `tools/cursorlib.py` (`THEMES`).
+Desenhos em `tools/designs.py` (grade 32×32); visual (contorno, brilho e temas) em `tools/cursorlib.py` (`THEMES`).
 
 ## Observações
 
 - Hotspots: ponta da seta, ponta do indicador (Link), ponta da caneta, ponta do pin (Local) e centro nos demais.
 - O esquema clássico usa `.cur` estáticos também para *Segundo plano* e *Ocupado*; para o anel girando use o esquema animado.
-- Se um cursor animado aparecer embaçado em algum ajuste de DPI, use o esquema clássico.
+- Se um cursor animado aparecer embaçado em algum ajuste de DPI (os `.ani` não têm 96/128 px), use o esquema clássico.
 
 ## English (short)
 
-**Dark Blur Cursor** is a Windows cursor theme in dark and light frosted-glass styles, each with a classic (static)
-and an animated scheme, plus AutoHotkey v2 click animations (ripple, glow, particles, orbit) with a dark/light/auto theme.
+**Dark Blur Cursor** is a monochrome Windows cursor theme with a whitish frosted body, thin darker edge and soft glow: a dark-background
+variant (white glow) and a light-background variant (stronger gray edge and shadow), each with a classic (static) and an animated scheme (every cursor is an `.ani` with a
+sweeping white shimmer and pulsing glow), plus AutoHotkey v2 click animations (ripple, glow, particles, orbit) with a dark/light/auto theme.
 
 - **Install a scheme:** extract the release, open e.g. `dark/cursor-classic`, right-click `install.inf` > *Install*, then pick
   *Dark Blur* / *Dark Blur Animated* / *Light Blur* / *Light Blur Animated* in *Mouse > Pointers*.
