@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Pre-renders the click effects to click-animations/<effect>-<dark|light>.bgra.
 
-Format (same idea as Galaxy Cursor): 48 frames of 128x128 pixels, 32bpp, top-down,
+Format: 48 frames of 128x128 pixels, 32bpp, top-down,
 byte order B,G,R,A with PREMULTIPLIED alpha, ready for UpdateLayeredWindow (AC_SRC_ALPHA).
 """
 import os, math, sys

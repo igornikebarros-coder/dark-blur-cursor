@@ -18,8 +18,6 @@ Pacote de cursores para Windows em estilo **vidro fosco** (*frosted glass*), em 
 Os dois têm brilho interno sutil, sombra leve e uma **luz azul/violeta ao redor** do desenho (nítida em 32 px),
 no esquema clássico (estático) e no animado, mais **animações de clique** em AutoHotkey v2 com tema claro/escuro.
 
-Inspirado na estrutura do [Galaxy Cursor](https://github.com/sebastianheder01/Galaxy-Cursor).
-
 ## Conteúdo
 
 | Pasta | O que tem |
