@@ -1,0 +1,80 @@
+; Dark Blur Cursor - Light Blur
+; Botao direito neste arquivo > Instalar. Depois: Configuracoes > Mouse > Ponteiro (ou main.cpl) e escolha o esquema.
+[Version]
+signature="$CHICAGO$"
+
+[DefaultInstall]
+CopyFiles = Scheme.Cur
+AddReg    = Scheme.Reg
+
+[DestinationDirs]
+Scheme.Cur = 10,"%CUR_DIR%"
+
+[Scheme.Reg]
+HKCU,"Control Panel\Cursors\Schemes","%SCHEME_NAME%",,"%10%\%CUR_DIR%\normal.cur,%10%\%CUR_DIR%\help.cur,%10%\%CUR_DIR%\working.cur,%10%\%CUR_DIR%\busy.cur,%10%\%CUR_DIR%\precision.cur,%10%\%CUR_DIR%\text.cur,%10%\%CUR_DIR%\handwriting.cur,%10%\%CUR_DIR%\unavailable.cur,%10%\%CUR_DIR%\vertical.cur,%10%\%CUR_DIR%\horizontal.cur,%10%\%CUR_DIR%\diagonal1.cur,%10%\%CUR_DIR%\diagonal2.cur,%10%\%CUR_DIR%\move.cur,%10%\%CUR_DIR%\alternate.cur,%10%\%CUR_DIR%\link.cur,%10%\%CUR_DIR%\location.cur,%10%\%CUR_DIR%\person.cur"
+
+[Scheme.Cur]
+normal.cur
+help.cur
+working.cur
+busy.cur
+precision.cur
+text.cur
+handwriting.cur
+unavailable.cur
+vertical.cur
+horizontal.cur
+diagonal1.cur
+diagonal2.cur
+move.cur
+alternate.cur
+link.cur
+location.cur
+person.cur
+alias.cur
+copy.cur
+cell.cur
+col-resize.cur
+row-resize.cur
+zoom-in.cur
+zoom-out.cur
+grab.cur
+grabbing.cur
+vertical-text.cur
+
+[SourceDisksNames]
+1 = %DISK_NAME%,,,
+
+[SourceDisksFiles]
+normal.cur = 1
+help.cur = 1
+working.cur = 1
+busy.cur = 1
+precision.cur = 1
+text.cur = 1
+handwriting.cur = 1
+unavailable.cur = 1
+vertical.cur = 1
+horizontal.cur = 1
+diagonal1.cur = 1
+diagonal2.cur = 1
+move.cur = 1
+alternate.cur = 1
+link.cur = 1
+location.cur = 1
+person.cur = 1
+alias.cur = 1
+copy.cur = 1
+cell.cur = 1
+col-resize.cur = 1
+row-resize.cur = 1
+zoom-in.cur = 1
+zoom-out.cur = 1
+grab.cur = 1
+grabbing.cur = 1
+vertical-text.cur = 1
+
+[Strings]
+CUR_DIR     = "Cursors\Light Blur"
+SCHEME_NAME = "Light Blur"
+DISK_NAME   = "Dark Blur Cursor"
